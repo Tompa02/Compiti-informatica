@@ -41,7 +41,7 @@ fakeApi = () => {
 }
 
 app.get('/', (req, res) => {
-    res.render('main', {layout: 'index', suggestedChamps: fakeApi(), listExists: true} );
+  res.render('main', {layout: 'index', suggestedChamps: fakeApi(), listExists: true});
 });
 
 
