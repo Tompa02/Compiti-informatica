@@ -7,17 +7,17 @@ const teams = {
   pippo: {
     name: "pippo",
     password: "",
-    score: 100,
+    score: 0,
     killedShips: [],
-    firedBullets: 10,
+    firedBullets: 0,
     lastFiredBullet: new Date().getTime()
   }
 }
 const field = []
 const ships = []
 
-const W = process.argv[2] || 6
-const H = process.argv[3] || 6
+const W = process.argv[2] || 6 
+const H = process.argv[3] || 6          //scelgo grandezza campo e numero navi
 const S = process.argv[4] || 10
 
 for (let y = 0; y < H; y++) {
@@ -29,19 +29,19 @@ for (let y = 0; y < H; y++) {
       y,
       ship: null,
       hit: false
-    })    
+    })
   } 
   field.push(row)
 }
 
 let id = 1
-for (let i = 0; i < S; i++) {
+for (let i = 1; i < S+1; i++) {       //inizializzo la creazione delle ship
   const maxHp = faker.random.number({ min: 1, max: 6 })
-  const vertical = faker.random.boolean()
-  console.log({ vertical, maxHp })
+  const vertical = faker.random.boolean() //vita e disposizione
+  //console.log({ vertical, maxHp })
 
   const ship = {
-    id,
+    id: i,
     name: faker.name.firstName(),
     x: faker.random.number({ min: 0, max: vertical ? W - 1 : W - maxHp }),
     y: faker.random.number({ min: 0, max: vertical ? H - maxHp : H - 1 }),
@@ -54,10 +54,10 @@ for (let i = 0; i < S; i++) {
 
   let found = false
   for (let e = 0; e < ship.maxHp; e++) {
-    const x = ship.vertical ? ship.x : ship.x + e
+    const x = ship.vertical ? ship.x : ship.x + e       //sto piazzando le ships
     const y = ship.vertical ? ship.y + e : ship.y
     if (field[y][x].ship) {
-      found = true
+      let found = true
       break
     }
   }
@@ -70,19 +70,16 @@ for (let i = 0; i < S; i++) {
     }
   
     ships.push(ship)
-    id ++
   }
 }
 
-app.get("/", ({ query: { format } }, res) => {
+app.get("/", ({ query: { format } }, res) => {    //restituisco una cella con x, y, se è colpita, il possibile team e la barca
   const visibleField = field.map(row => row.map(cell => ({ 
     x: cell.x,
     y: cell.y,
     hit: cell.hit,
     team: cell.team,
-    ship: cell.hit ? 
-      cell.ship ? { id: cell.ship.id, name: cell.ship.name, alive: cell.ship.alive, killer: cell.ship.killer } : null 
-      : null
+    ship: cell.ship ? { id: cell.ship.id, name: cell.ship.name, alive: cell.ship.alive, killer: cell.ship.killer } : null 
   })))
 
   const visibleShipInfo = ships.map(ship => ({
@@ -108,7 +105,6 @@ app.get("/", ({ query: { format } }, res) => {
         table, td, th {
           border: 1px solid black;
         }
-
         td {
           width: 40px;
           height: 40px;
@@ -136,10 +132,47 @@ app.get("/score", (req, res) => {
   res.json([])
 })
 
-app.signup("/signup", (req, res) => {
+app.get("/signup", (req, res) => {
   //team password
 })
-app.get("/fire", ({ query: { x, y, team, password } }, res) => {  
+app.get("/fire", ({ query: { x, y, team, password } }, res) => { 
+   const Attackers = teams[team]
+   const report = ""
+   if (new Date().getTime()-Attackers.lastFiredBullet < 1000){
+      report = "Stai ricaricando, rilassati e lascia fare ai soldati"    //check sul tempo passato per sparare una pallottola
+   }else{    
+    Attackers.firedBullets +=1
+    Attackers.lastFiredBullet = new Date().getTime()
+      if (x>W || y>H || x<0 || y<0 ){
+        Attackers.score -= 5 
+        report = "Sei riuscito a mancare il mondo, becchi 5 punti di penitenza e un atlante"   //check se ha beccato il tabellone
+      }else{
+        const UnderAttack = field[x][y]
+        if(UnderAttack.hit){
+          Attackers.score -=2
+          report = "Ci hai già sparato, soffri di perdita della memoria a breve termine? nel dubbio -2 punti"  //check era già stata colpita
+        }else{
+          UnderAttack.hit = true
+          if(UnderAttack.ship){
+            const AttackedShip = UnderAttack.ship
+            AttackedShip.curHp -=1 
+            if(AttackedShip.curHp === 0){
+              AttackedShip.alive = false
+              AttackedShip.killer = Attackers.name
+              Attackers.killedShips.push(FiredShip.id)
+              Attackers.score +=3
+              report = `NON E' UN ESERCITAZIONE ${FiredShip.name} E' STATA AFFONDATA`
+            }else{
+                Attackers.score += 1
+                report = "Hai colpito una nave ma a quanto pare di sfuggita"
+            }
+          }else{
+            resultmessage = "Peccato, non è esploso nulla"
+          }
+        }
+      }
+    }
+    res.send({score: FiringTeamData.score, message:resultmessage})
   /*
     1. segnare la cella come colpita
     2. segnare eventualmente la nave come colpita (ridurre gli hp e verificare se e' morta)
