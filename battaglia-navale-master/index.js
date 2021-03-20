@@ -128,8 +128,8 @@ app.get("/", ({ query: { format } }, res) => {    //restituisco una cella con x,
   }
 })
 
-app.get("/score", (req, res) => {
-  res.json([])
+app.get("/score", ({query: team}, res) => {
+  res.send({score: teams[team].score})
 })
 
 app.get("/signup", (req, res) => {
@@ -137,7 +137,7 @@ app.get("/signup", (req, res) => {
 })
 app.get("/fire", ({ query: { x, y, team, password } }, res) => { 
    const Attackers = teams[team]
-   const report = ""
+   let report = ""
    if (new Date().getTime()-Attackers.lastFiredBullet < 1000){
       report = "Stai ricaricando, rilassati e lascia fare ai soldati"    //check sul tempo passato per sparare una pallottola
    }else{    
@@ -147,8 +147,8 @@ app.get("/fire", ({ query: { x, y, team, password } }, res) => {
         Attackers.score -= 5 
         report = "Sei riuscito a mancare il mondo, becchi 5 punti di penitenza e un atlante"   //check se ha beccato il tabellone
       }else{
-        const UnderAttack = field[x][y]
-        if(UnderAttack.hit){
+        const UnderAttack = field[y][x]
+        if(UnderAttack.hit && UnderAttack.ship===undefined){
           Attackers.score -=2
           report = "Ci hai già sparato, soffri di perdita della memoria a breve termine? nel dubbio -2 punti"  //check era già stata colpita
         }else{
@@ -159,20 +159,20 @@ app.get("/fire", ({ query: { x, y, team, password } }, res) => {
             if(AttackedShip.curHp === 0){
               AttackedShip.alive = false
               AttackedShip.killer = Attackers.name
-              Attackers.killedShips.push(FiredShip.id)
+              Attackers.killedShips.push(AttackedShip.id)
               Attackers.score +=3
-              report = `NON E' UN ESERCITAZIONE ${FiredShip.name} E' STATA AFFONDATA`
+              report = `NON E' UN ESERCITAZIONE ${AttackedShip.name} E' STATA AFFONDATA`
             }else{
                 Attackers.score += 1
                 report = "Hai colpito una nave ma a quanto pare di sfuggita"
             }
           }else{
-            resultmessage = "Peccato, non è esploso nulla"
+            report = "Peccato, non è esploso nulla"
           }
         }
       }
     }
-    res.send({score: FiringTeamData.score, message:resultmessage})
+    res.send({score: Attackers.score, message:report})
   /*
     1. segnare la cella come colpita
     2. segnare eventualmente la nave come colpita (ridurre gli hp e verificare se e' morta)
